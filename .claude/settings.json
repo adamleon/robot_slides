@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(npm install*)",
+      "Bash(npm run *)",
+      "Bash(node scripts/*)",
+      "Bash(node node_modules/@slidev/cli/bin/slidev.mjs*)",
+      "Bash(npx slidev*)",
+      "Bash(npx playwright install*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git branch*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git config --get*)",
+      "Bash(ls*)",
+      "PowerShell(node*)",
+      "PowerShell(npm*)",
+      "PowerShell(npx*)",
+      "PowerShell(Get-ChildItem*)",
+      "PowerShell(Test-Path*)",
+      "PowerShell(Set-Location*)",
+      "PowerShell($env:Path = *)"
+    ],
+    "deny": [
+      "Bash(git push*)",
+      "Bash(git reset --hard*)",
+      "Bash(git checkout -- *)",
+      "Bash(git restore *)",
+      "Bash(git clean -f*)",
+      "Bash(git branch -D *)",
+      "Bash(rm -rf*)",
+      "PowerShell(Remove-Item -Recurse*)"
+    ]
+  }
+}
