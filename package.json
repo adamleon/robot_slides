@@ -1,0 +1,26 @@
+{
+  "name": "robot-slides",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Interactive lecture slide framework for a robotics and computer vision course. See docs/DESIGN.md.",
+  "scripts": {
+    "dev": "slidev",
+    "build:full": "node scripts/build-full.mjs",
+    "build:lite": "node scripts/build-lite.mjs",
+    "build:pdf": "node scripts/build-pdf.mjs"
+  },
+  "dependencies": {
+    "@slidev/cli": "^0.50.0",
+    "@slidev/theme-default": "^0.25.0",
+    "three": "^0.169.0",
+    "vite-plugin-singlefile": "^2.0.3",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.0",
+    "@types/three": "^0.169.0",
+    "playwright-chromium": "^1.47.0",
+    "typescript": "^5.5.0"
+  }
+}

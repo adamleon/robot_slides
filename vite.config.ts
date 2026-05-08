@@ -1,0 +1,85 @@
+// Vite config picked up by Slidev at build/dev time.
+//
+// Two responsibilities:
+//
+// 1. Auto-import our project-root components/ directory.
+//    Slidev's userRoot defaults to the slide file's directory, so its built-in
+//    auto-import would only scan lectures/<NN-name>/components/. We add our own
+//    unplugin-vue-components instance pointing at the absolute project-root
+//    components/ folder so shared widgets (RobotCell, SpinningCube, …) resolve
+//    no matter which lecture is being built.
+//
+//    Slidev v0.50 only loads vite.config.ts from each "root" (userRoot,
+//    addons, themes); it does NOT walk up. To make per-lecture builds pick
+//    up this config, lectures/<NN-name>/vite.config.ts re-exports this file.
+//
+// 2. Inject vite-plugin-singlefile when VITE_BUILD_PROFILE=lite, producing a
+//    self-contained single-HTML deck. Full and pdf builds use chunked output.
+
+import { defineConfig } from "vite";
+import { viteSingleFile } from "vite-plugin-singlefile";
+import Components from "unplugin-vue-components/vite";
+import { resolve } from "node:path";
+
+// process.cwd() is the project root: build scripts (and `npm run dev`) always
+// invoke slidev from there. We can't use import.meta.url because Vite bundles
+// this config via esbuild — the bundled URL points at a temp file, not source.
+const projectRoot = process.cwd();
+
+const profile = process.env.VITE_BUILD_PROFILE ?? "full";
+const isLite = profile === "lite";
+
+// Strip Slidev's `manualChunks` from the resolved config when building lite.
+// vite-plugin-singlefile sets `inlineDynamicImports: true`, which Rollup
+// rejects in combination with any manualChunks. Slidev's own vite config
+// hook adds a manualChunks function for monaco/shiki splitting; Vite's
+// mergeConfig keeps it through user-config merge. configResolved runs after
+// all merging, so this is the reliable place to delete it.
+const stripManualChunksForSinglefile = {
+  name: "robot-slides:strip-manual-chunks",
+  enforce: "post" as const,
+  configResolved(config: { build?: { rollupOptions?: { output?: unknown } } }) {
+    const output = config.build?.rollupOptions?.output;
+    if (!output) return;
+    const outputs = Array.isArray(output) ? output : [output];
+    for (const o of outputs) {
+      // any-cast: Rollup's typed OutputOptions doesn't allow delete cleanly.
+      delete (o as { manualChunks?: unknown }).manualChunks;
+    }
+  },
+};
+
+export default defineConfig({
+  plugins: [
+    Components({
+      dirs: [resolve(projectRoot, "components")],
+      extensions: ["vue"],
+      include: [/\.vue$/, /\.vue\?vue/, /\.md$/],
+      dts: false,
+      directoryAsNamespace: false,
+    }),
+    ...(isLite
+      ? [
+          viteSingleFile({ removeViteModuleLoader: true }),
+          stripManualChunksForSinglefile,
+        ]
+      : []),
+  ],
+  build: isLite
+    ? {
+        // Inline all assets (≤100MB cap) so the lite build is one .html file.
+        assetsInlineLimit: 100_000_000,
+        cssCodeSplit: false,
+        chunkSizeWarningLimit: 100_000,
+        rollupOptions: {
+          output: {
+            // vite-plugin-singlefile sets inlineDynamicImports, which is
+            // incompatible with Slidev's default manualChunks. Force a single
+            // chunk so all JS ends up in the inlined index.html.
+            manualChunks: undefined,
+            inlineDynamicImports: true,
+          },
+        },
+      }
+    : {},
+});
