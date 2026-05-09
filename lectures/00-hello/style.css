@@ -29,14 +29,37 @@
   --cookbook-teal:       #5BA38F;
 
   --slidev-theme-primary: var(--cookbook-red);
+
+  /*
+   * Theme the SlidingToggle component (defined in components/SlidingToggle.vue).
+   * The component reads these variables with neutral defaults; here we lean into
+   * the cookbook palette so the toggle reads as part of the deck.
+   */
+  --toggle-off-bg: var(--cookbook-surface);
+  --toggle-on-bg:  var(--cookbook-red);
+  --toggle-knob:   var(--cookbook-text-bold);
 }
 
+/*
+ * Every Slidev layout (cover, default, center, etc.) gets the dark
+ * background — the default theme paints cover/center white, which then
+ * showed through behind the gingham accent.
+ *
+ * background-image: none cancels any layout-specific gradient/image
+ * the theme might have set.
+ */
 html,
 body,
 #app,
 .slidev-page,
-.slidev-layout {
+.slidev-layout,
+.slidev-layout.cover,
+.slidev-layout.default,
+.slidev-layout.center,
+.slidev-layout.intro,
+.slidev-layout.section {
   background-color: var(--cookbook-bg) !important;
+  background-image: none !important;
   color: var(--cookbook-text);
 }
 
@@ -119,15 +142,32 @@ body,
 /*
  * Gingham corner accent.
  *
- * A small red-on-pink checker tucked into the bottom-right of "cover"
- * and "center"-class slides — i.e. title and section-break layouts.
- * Built with two layered linear-gradients: one alternates red/transparent
- * horizontally, the other vertically. Where they overlap (50% × 50%) we
- * get solid red; the surrounding cells alternate red and pink in the
- * gingham way.
+ * A small red checker tucked into the bottom-right of cover and center-
+ * class slides — i.e. title and section-break layouts.
+ *
+ * Tile layout (matches the cookbook's gingham weave):
+ *
+ *   ┌─────────┬─────────┐
+ *   │   red   │ red @50%│
+ *   ├─────────┼─────────┤
+ *   │ red @50%│   bg    │
+ *   └─────────┴─────────┘
+ *
+ * The half-tone cells are red at 50% alpha over the dark slide
+ * background — that's what the cookbook's "pink" actually is (a red
+ * thread crossing the white page). On a dark deck the same construction
+ * blends red over the dark bg instead of inventing a separately-chosen
+ * pink. The bottom-right "no thread" cell is the slide background.
+ *
+ * Implementation: a 28×28 SVG tile, repeating. The first <rect> fills
+ * the whole tile with the slide bg so nothing of the underlying layout
+ * shows through (earlier linear-gradient + multiply versions had
+ * transparent cells that revealed the theme-default white layout).
  *
  * Sized so it reads as "the cookbook" from across the room without
- * eating the lower-right text region.
+ * eating the lower-right text region. A radial mask softens the inner
+ * edge so the pattern dissolves into the slide instead of forming a
+ * hard rectangle.
  */
 .slidev-layout.cover,
 .slidev-layout.center.text-center {
@@ -143,26 +183,10 @@ body,
   width: 280px;
   height: 280px;
   pointer-events: none;
-  opacity: 0.85;
-  background-image:
-    linear-gradient(
-      to right,
-      var(--cookbook-red) 0,
-      var(--cookbook-red) 50%,
-      var(--cookbook-pink) 50%,
-      var(--cookbook-pink) 100%
-    ),
-    linear-gradient(
-      to bottom,
-      var(--cookbook-red) 0,
-      var(--cookbook-red) 50%,
-      transparent 50%,
-      transparent 100%
-    );
+  opacity: 0.95;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28'><rect width='28' height='28' fill='%231B1416'/><rect width='14' height='14' x='0' y='0' fill='%23F26060'/><rect width='14' height='14' x='14' y='0' fill='%23F26060' fill-opacity='0.5'/><rect width='14' height='14' x='0' y='14' fill='%23F26060' fill-opacity='0.5'/></svg>");
+  background-repeat: repeat;
   background-size: 28px 28px;
-  background-blend-mode: multiply;
-  /* Soft fade-in from the upper-left so the pattern dissolves into the
-     dark background instead of forming a hard rectangle. */
   -webkit-mask-image: radial-gradient(circle at 100% 100%, black 0%, black 40%, transparent 80%);
           mask-image: radial-gradient(circle at 100% 100%, black 0%, black 40%, transparent 80%);
 }

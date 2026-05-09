@@ -36,6 +36,12 @@ const knob = useCriticalSpring(target, { responseTime: 0.18 });
 </template>
 
 <style scoped>
+/*
+ * Colours are exposed as CSS variables so a deck's style.css can theme
+ * the toggle without forking the component. Defaults are neutral
+ * (grey/blue/white) so the component still looks reasonable on a deck
+ * that hasn't set anything.
+ */
 .toggle {
   width: 60px;
   height: 32px;
@@ -43,13 +49,13 @@ const knob = useCriticalSpring(target, { responseTime: 0.18 });
   position: relative;
   border: none;
   cursor: pointer;
-  background: #444;
+  background: var(--toggle-off-bg, #444);
   padding: 0;
   /* Background colour is the only thing CSS animates — purely cosmetic. */
   transition: background-color 200ms ease;
 }
 .toggle.on {
-  background: #4488ff;
+  background: var(--toggle-on-bg, #4488ff);
 }
 .knob {
   position: absolute;
@@ -58,7 +64,7 @@ const knob = useCriticalSpring(target, { responseTime: 0.18 });
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: white;
+  background: var(--toggle-knob, white);
   /* Spring drives this every frame — no CSS transition on transform. */
   transform: translateX(calc(var(--knob, 0) * 28px));
 }
