@@ -10,6 +10,9 @@ drawings:
   persist: false
 transition: slide-left
 mdc: true
+# Hash routing is required so the built deck opens from file:// — Vue
+# Router's default history mode treats the file path as a route and 404s.
+routerMode: hash
 ---
 
 # Hello, robot slides

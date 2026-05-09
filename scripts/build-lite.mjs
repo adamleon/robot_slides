@@ -10,6 +10,7 @@ import path from "node:path";
 import fs from "node:fs";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { stripCdnRefs } from "./strip-cdn-refs.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const projectRoot = path.resolve(path.dirname(__filename), "..");
@@ -55,6 +56,11 @@ if (!fs.existsSync(builtIndex)) {
 
 fs.mkdirSync(path.dirname(outFile), { recursive: true });
 fs.copyFileSync(builtIndex, outFile);
+
+const removed = stripCdnRefs(outFile);
+if (removed > 0) {
+  console.log(`Stripped ${removed} CDN <link> tag(s) for offline correctness.`);
+}
 
 const sizeMB = (fs.statSync(outFile).size / 1_048_576).toFixed(2);
 console.log(`\n✓ Lite build at ${outFile} (${sizeMB} MB)`);
