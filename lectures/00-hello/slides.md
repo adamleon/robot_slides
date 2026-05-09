@@ -13,6 +13,9 @@ mdc: true
 # Hash routing is required so the built deck opens from file:// — Vue
 # Router's default history mode treats the file path as a route and 404s.
 routerMode: hash
+# Dark mode: projector-safe (no large white surfaces). Palette and tweaks
+# live in lectures/00-hello/style.css and reference "Den rødrutede kokeboka".
+colorSchema: dark
 ---
 
 # Hello, robot slides

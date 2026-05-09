@@ -1,0 +1,168 @@
+/*
+ * style.css — themed for "Den rødrutede kokeboka".
+ *
+ * Slidev auto-loads style.css adjacent to slides.md. Loaded after the
+ * default theme, so these rules override theme defaults.
+ *
+ * Design constraints (projector use):
+ *   - No large white surfaces. The default-theme white background is
+ *     replaced by a warm near-black.
+ *   - Cookbook coral red (#F26060) is the primary accent; pulled from
+ *     the gingham reference image.
+ *   - Body text is warm cream (#E8D7B5) — calmer than pure white but
+ *     still readable from the back of a lecture hall.
+ *   - Muted teal (#5BA38F) used sparingly as the red's complement
+ *     (links, code-line highlights).
+ *
+ * Per DESIGN.md §0.11: this file styles cosmetic surfaces only. Motion
+ * still goes through lib/control.ts.
+ */
+
+:root {
+  --cookbook-red:        #F26060;
+  --cookbook-pink:       #F9A8A8;
+  --cookbook-bg:         #1B1416;
+  --cookbook-surface:    #261C1F;
+  --cookbook-text:       #E8D7B5;
+  --cookbook-text-bold:  #F4E5C2;
+  --cookbook-text-muted: #9C8C72;
+  --cookbook-teal:       #5BA38F;
+
+  --slidev-theme-primary: var(--cookbook-red);
+}
+
+html,
+body,
+#app,
+.slidev-page,
+.slidev-layout {
+  background-color: var(--cookbook-bg) !important;
+  color: var(--cookbook-text);
+}
+
+/* Headings — cookbook red, scaled by Slidev's default heading sizes. */
+.slidev-layout h1,
+.slidev-layout h2,
+.slidev-layout h3 {
+  color: var(--cookbook-red);
+}
+.slidev-layout h4,
+.slidev-layout h5,
+.slidev-layout h6 {
+  color: var(--cookbook-text-bold);
+}
+
+.slidev-layout strong,
+.slidev-layout b {
+  color: var(--cookbook-text-bold);
+}
+
+.slidev-layout a {
+  color: var(--cookbook-teal);
+  text-decoration: underline;
+  text-decoration-color: rgba(91, 163, 143, 0.4);
+}
+.slidev-layout a:hover {
+  text-decoration-color: var(--cookbook-teal);
+}
+
+/* Inline code and code blocks: lift to the surface tone, keep contrast. */
+.slidev-layout :not(pre) > code {
+  background-color: var(--cookbook-surface);
+  color: var(--cookbook-pink);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+.slidev-layout pre,
+.slidev-layout pre[class*="language-"] {
+  background-color: var(--cookbook-surface) !important;
+  border: 1px solid rgba(242, 96, 96, 0.15);
+  border-radius: 6px;
+}
+
+/* Slidev keyboard hint chip / kbd elements — keep visible on dark. */
+.slidev-layout kbd {
+  background-color: var(--cookbook-surface);
+  color: var(--cookbook-text-bold);
+  border: 1px solid rgba(232, 215, 181, 0.25);
+  border-radius: 3px;
+  padding: 0.05em 0.4em;
+  font-size: 0.85em;
+}
+
+/* Blockquote — left red bar, soft pink type. */
+.slidev-layout blockquote {
+  border-left: 4px solid var(--cookbook-red);
+  background: var(--cookbook-surface);
+  color: var(--cookbook-pink);
+  padding: 0.5em 1em;
+  border-radius: 0 4px 4px 0;
+}
+
+/* Tables — dark surface with red header underline. */
+.slidev-layout table {
+  border-collapse: collapse;
+}
+.slidev-layout thead {
+  border-bottom: 2px solid var(--cookbook-red);
+}
+.slidev-layout th {
+  color: var(--cookbook-red);
+  text-align: left;
+  padding: 0.4em 0.8em;
+}
+.slidev-layout td {
+  padding: 0.4em 0.8em;
+  border-bottom: 1px solid rgba(232, 215, 181, 0.08);
+}
+
+/*
+ * Gingham corner accent.
+ *
+ * A small red-on-pink checker tucked into the bottom-right of "cover"
+ * and "center"-class slides — i.e. title and section-break layouts.
+ * Built with two layered linear-gradients: one alternates red/transparent
+ * horizontally, the other vertically. Where they overlap (50% × 50%) we
+ * get solid red; the surrounding cells alternate red and pink in the
+ * gingham way.
+ *
+ * Sized so it reads as "the cookbook" from across the room without
+ * eating the lower-right text region.
+ */
+.slidev-layout.cover,
+.slidev-layout.center.text-center {
+  position: relative;
+  overflow: hidden;
+}
+.slidev-layout.cover::after,
+.slidev-layout.center.text-center::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 280px;
+  height: 280px;
+  pointer-events: none;
+  opacity: 0.85;
+  background-image:
+    linear-gradient(
+      to right,
+      var(--cookbook-red) 0,
+      var(--cookbook-red) 50%,
+      var(--cookbook-pink) 50%,
+      var(--cookbook-pink) 100%
+    ),
+    linear-gradient(
+      to bottom,
+      var(--cookbook-red) 0,
+      var(--cookbook-red) 50%,
+      transparent 50%,
+      transparent 100%
+    );
+  background-size: 28px 28px;
+  background-blend-mode: multiply;
+  /* Soft fade-in from the upper-left so the pattern dissolves into the
+     dark background instead of forming a hard rectangle. */
+  -webkit-mask-image: radial-gradient(circle at 100% 100%, black 0%, black 40%, transparent 80%);
+          mask-image: radial-gradient(circle at 100% 100%, black 0%, black 40%, transparent 80%);
+}
