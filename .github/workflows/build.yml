@@ -1,0 +1,101 @@
+# Build every lecture's full / lite / pdf artifacts on push, PR, or manual run.
+#
+# Two jobs:
+#   1. list-lectures — discovers every lectures/<NN-name>/slides.md and emits
+#      a JSON array of lecture names. Lets the build job scale automatically
+#      as new lectures are added (no workflow edits needed).
+#   2. build — runs once per lecture in parallel via matrix. Uploads each
+#      lecture's three artifacts (folder + lite .html + pdf) as a single
+#      artifact named after the lecture folder.
+#
+# Runner: ubuntu-latest. The artifacts are platform-independent HTML/PDF;
+# Linux runners are faster and cheaper than Windows. The build scripts use
+# process.execPath + path APIs, so they work on either.
+
+name: Build decks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Cancel an in-progress run if a new commit is pushed to the same ref.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  list-lectures:
+    runs-on: ubuntu-latest
+    outputs:
+      lectures: ${{ steps.list.outputs.lectures }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: list
+        name: Discover lectures/<NN-name>/slides.md
+        shell: bash
+        run: |
+          set -euo pipefail
+          lectures=$(
+            find lectures -mindepth 2 -maxdepth 2 -name slides.md -printf '%h\n' \
+              | xargs -n1 basename \
+              | sort \
+              | jq -R -s -c 'split("\n") | map(select(length > 0))'
+          )
+          if [ "$lectures" = "[]" ]; then
+            echo "::error::No lectures found. Expected lectures/<NN-name>/slides.md."
+            exit 1
+          fi
+          echo "Found: $lectures"
+          echo "lectures=$lectures" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: list-lectures
+    runs-on: ubuntu-latest
+    strategy:
+      # Don't abandon other lectures if one fails — useful for diagnosing.
+      fail-fast: false
+      matrix:
+        lecture: ${{ fromJson(needs.list-lectures.outputs.lectures) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Install Playwright system deps for chromium
+        # The chromium binary itself was downloaded by playwright-chromium's
+        # npm postinstall. install-deps installs the Linux libs the binary
+        # links against (libnss3, libatk, etc.) so PDF export can launch.
+        run: npx --yes playwright install-deps chromium
+
+      - name: Build full tier
+        run: node scripts/build-full.mjs lectures/${{ matrix.lecture }}/slides.md
+
+      - name: Build lite tier
+        run: node scripts/build-lite.mjs lectures/${{ matrix.lecture }}/slides.md
+
+      - name: Build pdf tier
+        run: node scripts/build-pdf.mjs lectures/${{ matrix.lecture }}/slides.md
+
+      - name: Upload ${{ matrix.lecture }} artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.lecture }}
+          path: |
+            dist/${{ matrix.lecture }}/
+            dist/${{ matrix.lecture }}-lite.html
+            dist/${{ matrix.lecture }}.pdf
+          retention-days: 30
+          if-no-files-found: error
