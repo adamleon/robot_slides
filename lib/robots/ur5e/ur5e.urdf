@@ -1,0 +1,177 @@
+<?xml version="1.0"?>
+<!--
+  ur5e.urdf — UR5e Universal Robot, visual-only.
+
+  Hand-rolled flat URDF based on the xacro + config from
+    https://github.com/UniversalRobots/Universal_Robots_ROS2_Description
+  (rolling branch). Numbers were transcribed from:
+    config/ur5e/default_kinematics.yaml — joint origin transforms
+    config/ur5e/visual_parameters.yaml  — per-link mesh offsets
+    config/ur5e/joint_limits.yaml       — position / velocity / effort
+
+  Inertia / collision geometry are intentionally omitted. We render
+  visual meshes only and use control-loop dynamics from lib/control.ts
+  for the slider→joint binding; we do not run rigid-body simulation
+  on this URDF.
+
+  Mesh paths are relative to this file (public/urdf/ur5e/) so the
+  build serves them from /urdf/ur5e/meshes/visual/*.dae without a
+  ROS package resolver.
+-->
+<robot name="ur5e">
+
+  <!-- =================================================================== -->
+  <!--  Base                                                                -->
+  <!-- =================================================================== -->
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 3.141592653589793"/>
+      <geometry>
+        <mesh filename="meshes/visual/base.dae"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <!-- =================================================================== -->
+  <!--  Joint 1 — shoulder pan                                              -->
+  <!-- =================================================================== -->
+  <joint name="shoulder_pan_joint" type="revolute">
+    <parent link="base_link"/>
+    <child  link="shoulder_link"/>
+    <origin xyz="0 0 0.1625" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-6.283185307179586"
+           upper=" 6.283185307179586"
+           velocity="3.141592653589793"
+           effort="150"/>
+  </joint>
+
+  <link name="shoulder_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 3.141592653589793"/>
+      <geometry>
+        <mesh filename="meshes/visual/shoulder.dae"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <!-- =================================================================== -->
+  <!--  Joint 2 — shoulder lift                                             -->
+  <!-- =================================================================== -->
+  <joint name="shoulder_lift_joint" type="revolute">
+    <parent link="shoulder_link"/>
+    <child  link="upper_arm_link"/>
+    <origin xyz="0 0 0" rpy="1.5707963267948966 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-6.283185307179586"
+           upper=" 6.283185307179586"
+           velocity="3.141592653589793"
+           effort="150"/>
+  </joint>
+
+  <link name="upper_arm_link">
+    <visual>
+      <origin xyz="0 0 0.138" rpy="1.5707963267948966 0 -1.5707963267948966"/>
+      <geometry>
+        <mesh filename="meshes/visual/upperarm.dae"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <!-- =================================================================== -->
+  <!--  Joint 3 — elbow                                                     -->
+  <!--  Position limit is intentionally ±π (half of the physical range) to  -->
+  <!--  match the URobots default — the lift shoulder gets in the way past -->
+  <!--  that, so planners constrain it.                                     -->
+  <!-- =================================================================== -->
+  <joint name="elbow_joint" type="revolute">
+    <parent link="upper_arm_link"/>
+    <child  link="forearm_link"/>
+    <origin xyz="-0.425 0 0" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-3.141592653589793"
+           upper=" 3.141592653589793"
+           velocity="3.141592653589793"
+           effort="150"/>
+  </joint>
+
+  <link name="forearm_link">
+    <visual>
+      <origin xyz="0 0 0.007" rpy="1.5707963267948966 0 -1.5707963267948966"/>
+      <geometry>
+        <mesh filename="meshes/visual/forearm.dae"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <!-- =================================================================== -->
+  <!--  Joint 4 — wrist 1                                                   -->
+  <!-- =================================================================== -->
+  <joint name="wrist_1_joint" type="revolute">
+    <parent link="forearm_link"/>
+    <child  link="wrist_1_link"/>
+    <origin xyz="-0.3922 0 0.1333" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-6.283185307179586"
+           upper=" 6.283185307179586"
+           velocity="3.141592653589793"
+           effort="28"/>
+  </joint>
+
+  <link name="wrist_1_link">
+    <visual>
+      <origin xyz="0 0 -0.127" rpy="1.5707963267948966 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/wrist1.dae"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <!-- =================================================================== -->
+  <!--  Joint 5 — wrist 2                                                   -->
+  <!-- =================================================================== -->
+  <joint name="wrist_2_joint" type="revolute">
+    <parent link="wrist_1_link"/>
+    <child  link="wrist_2_link"/>
+    <origin xyz="0 -0.0997 -2.0e-11" rpy="1.5707963267948966 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-6.283185307179586"
+           upper=" 6.283185307179586"
+           velocity="3.141592653589793"
+           effort="28"/>
+  </joint>
+
+  <link name="wrist_2_link">
+    <visual>
+      <origin xyz="0 0 -0.0997" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/wrist2.dae"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <!-- =================================================================== -->
+  <!--  Joint 6 — wrist 3                                                   -->
+  <!-- =================================================================== -->
+  <joint name="wrist_3_joint" type="revolute">
+    <parent link="wrist_2_link"/>
+    <child  link="wrist_3_link"/>
+    <origin xyz="0 0.0996 -2.0e-11"
+            rpy="1.5707963267948966 3.141592653589793 3.141592653589793"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-6.283185307179586"
+           upper=" 6.283185307179586"
+           velocity="3.141592653589793"
+           effort="28"/>
+  </joint>
+
+  <link name="wrist_3_link">
+    <visual>
+      <origin xyz="0 -0.0005 -0.0989" rpy="1.5707963267948966 0 0"/>
+      <geometry>
+        <mesh filename="meshes/visual/wrist3.dae"/>
+      </geometry>
+    </visual>
+  </link>
+
+</robot>

@@ -50,6 +50,10 @@ const stripManualChunksForSinglefile = {
 };
 
 export default defineConfig({
+  // Slidev's default publicDir is <slide-file-dir>/public, which means each
+  // lecture would need its own copy of public/urdf/ur5e/ etc. Override to the
+  // project-root public/ so shared assets are vendored once.
+  publicDir: resolve(projectRoot, "public"),
   plugins: [
     Components({
       dirs: [resolve(projectRoot, "components")],
@@ -65,8 +69,13 @@ export default defineConfig({
         ]
       : []),
   ],
+  // Empty the output directory at the start of every build. The default is
+  // off when outDir is outside Vite's project root (our dist/ is two levels
+  // up from the per-lecture userRoot), which leaves stale hashed chunks
+  // around between builds — confusing diagnostics and bloating archives.
   build: isLite
     ? {
+        emptyOutDir: true,
         // Inline all assets (≤100MB cap) so the lite build is one .html file.
         assetsInlineLimit: 100_000_000,
         cssCodeSplit: false,
@@ -81,5 +90,5 @@ export default defineConfig({
           },
         },
       }
-    : {},
+    : { emptyOutDir: true },
 });

@@ -1,0 +1,6 @@
+/*
+ * Slidev auto-loads this file. We just pull in the project-shared cookbook
+ * theme from styles/cookbook.css so palette/typography stay consistent
+ * across all lectures.
+ */
+@import url("../../styles/cookbook.css");
