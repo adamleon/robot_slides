@@ -15,24 +15,29 @@
 // Each controller registers a step with setup/control-driver.ts and gets
 // called once per animation frame with the real dt.
 
-import { ref, type Ref } from "vue";
+import { ref, unref, type Ref, type MaybeRef } from "vue";
 import { registerController } from "../setup/control-driver";
+
+// All gain/tuning parameters accept either a plain number (static gain) or a
+// Ref<number> (live-tunable — value is re-read each frame). The PID-tuning
+// slide drives Kp and Kd from slider refs; existing call sites that pass
+// plain numbers still work because unref() is a no-op for non-refs.
 
 // --- PID ---------------------------------------------------------------------
 
 export interface PIDOptions {
   /** Proportional gain. */
-  Kp: number;
+  Kp: MaybeRef<number>;
   /** Integral gain (default 0). */
-  Ki?: number;
+  Ki?: MaybeRef<number>;
   /** Derivative gain (default 0). */
-  Kd?: number;
+  Kd?: MaybeRef<number>;
   /** Virtual mass (default 1). */
-  mass?: number;
+  mass?: MaybeRef<number>;
   /** Initial value of the controlled variable (default = setpoint at register time). */
   initial?: number;
   /** Anti-windup limit on the integral term (default Infinity). */
-  integralClamp?: number;
+  integralClamp?: MaybeRef<number>;
 }
 
 /**
@@ -48,35 +53,39 @@ export function usePID(
   setpoint: Ref<number>,
   opts: PIDOptions
 ): Readonly<Ref<number>> {
-  const Ki = opts.Ki ?? 0;
-  const Kd = opts.Kd ?? 0;
-  const mass = opts.mass ?? 1;
-  const clamp = opts.integralClamp ?? Infinity;
-
   const actual = ref(opts.initial ?? setpoint.value);
   let velocity = 0;
   let integral = 0;
-  let prevError = setpoint.value - actual.value;
 
   registerController(
     (dt) => {
+      // Read tunables each frame; unref() handles both Ref and plain number.
+      const Kp = unref(opts.Kp);
+      const Ki = unref(opts.Ki) ?? 0;
+      const Kd = unref(opts.Kd) ?? 0;
+      const mass = unref(opts.mass) ?? 1;
+      const clamp = unref(opts.integralClamp) ?? Infinity;
+
       const error = setpoint.value - actual.value;
       integral += error * dt;
       if (integral > clamp) integral = clamp;
       if (integral < -clamp) integral = -clamp;
-      const derivative = (error - prevError) / Math.max(dt, 1e-6);
-      const force = opts.Kp * error + Ki * integral + Kd * derivative;
+      // Derivative-on-measurement: damp the actual's velocity rather than
+      // the error's rate. Avoids "derivative kick" — a jump in setpoint
+      // (which happens every frame the user drags a slider) would otherwise
+      // spike d(error)/dt and inject a force impulse. With this form, the
+      // step response is a clean 2nd-order mass-spring-damper:
+      //   m·x_ddot + Kd·x_dot + Kp·x = Kp·setpoint
+      const force = Kp * error + Ki * integral - Kd * velocity;
       const acceleration = force / mass;
       velocity += acceleration * dt;
       actual.value += velocity * dt;
-      prevError = error;
     },
     () => {
       // PDF/snap path: jump to setpoint, zero out internal state.
       actual.value = setpoint.value;
       velocity = 0;
       integral = 0;
-      prevError = 0;
     }
   );
 
@@ -87,11 +96,11 @@ export function usePID(
 
 export interface SpringOptions {
   /** Spring constant k (default 100). */
-  stiffness?: number;
+  stiffness?: MaybeRef<number>;
   /** Damping coefficient c (default 20 → roughly critically damped at m=1). */
-  damping?: number;
+  damping?: MaybeRef<number>;
   /** Mass m (default 1). */
-  mass?: number;
+  mass?: MaybeRef<number>;
   /** Initial value of the controlled variable (default = target at register time). */
   initial?: number;
 }
@@ -106,15 +115,15 @@ export function useSpring(
   target: Ref<number>,
   opts: SpringOptions = {}
 ): Readonly<Ref<number>> {
-  const k = opts.stiffness ?? 100;
-  const c = opts.damping ?? 20;
-  const m = opts.mass ?? 1;
-
   const actual = ref(opts.initial ?? target.value);
   let velocity = 0;
 
   registerController(
     (dt) => {
+      const k = unref(opts.stiffness) ?? 100;
+      const c = unref(opts.damping) ?? 20;
+      const m = unref(opts.mass) ?? 1;
+
       const displacement = actual.value - target.value;
       const springForce = -k * displacement;
       const dampingForce = -c * velocity;

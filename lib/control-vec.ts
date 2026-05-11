@@ -4,10 +4,13 @@
 // componentwise. Used for camera position, end-effector targets, and
 // anything else with x/y/z structure. See docs/DESIGN.md §5.5.
 
-import { ref, type Ref } from "vue";
+import { ref, unref, type Ref } from "vue";
 import * as THREE from "three";
 import { registerController } from "../setup/control-driver";
 import type { PIDOptions, SpringOptions } from "./control";
+
+// Gain/tuning options inherit MaybeRef<number> typing from ./control, so we
+// re-read them via unref() each frame. Plain-number callers still work.
 
 // --- Spring (Vec3) -----------------------------------------------------------
 
@@ -23,10 +26,6 @@ export function useSpringVec3(
   target: Ref<THREE.Vector3>,
   opts: SpringOptions = {}
 ): Readonly<Ref<THREE.Vector3>> {
-  const k = opts.stiffness ?? 100;
-  const c = opts.damping ?? 20;
-  const m = opts.mass ?? 1;
-
   const actual = ref(target.value.clone());
   const velocity = new THREE.Vector3();
   const tmpDisp = new THREE.Vector3();
@@ -34,6 +33,10 @@ export function useSpringVec3(
 
   registerController(
     (dt) => {
+      const k = unref(opts.stiffness) ?? 100;
+      const c = unref(opts.damping) ?? 20;
+      const m = unref(opts.mass) ?? 1;
+
       tmpDisp.copy(actual.value).sub(target.value);
       // F = -k·x − c·v
       tmpForce.copy(tmpDisp).multiplyScalar(-k);
@@ -74,22 +77,21 @@ export function usePIDVec3(
   setpoint: Ref<THREE.Vector3>,
   opts: PIDOptions
 ): Readonly<Ref<THREE.Vector3>> {
-  const Ki = opts.Ki ?? 0;
-  const Kd = opts.Kd ?? 0;
-  const mass = opts.mass ?? 1;
-  const clamp = opts.integralClamp ?? Infinity;
-
   const actual = ref(setpoint.value.clone());
   const velocity = new THREE.Vector3();
   const integral = new THREE.Vector3();
-  const prevError = new THREE.Vector3();
 
   const error = new THREE.Vector3();
-  const derivative = new THREE.Vector3();
   const force = new THREE.Vector3();
 
   registerController(
     (dt) => {
+      const Kp = unref(opts.Kp);
+      const Ki = unref(opts.Ki) ?? 0;
+      const Kd = unref(opts.Kd) ?? 0;
+      const mass = unref(opts.mass) ?? 1;
+      const clamp = unref(opts.integralClamp) ?? Infinity;
+
       error.copy(setpoint.value).sub(actual.value);
       integral.addScaledVector(error, dt);
       // Componentwise integral clamp.
@@ -100,23 +102,19 @@ export function usePIDVec3(
       if (integral.z > clamp) integral.z = clamp;
       if (integral.z < -clamp) integral.z = -clamp;
 
-      const dtSafe = Math.max(dt, 1e-6);
-      derivative.copy(error).sub(prevError).multiplyScalar(1 / dtSafe);
-
+      // Derivative-on-measurement (see lib/control.ts usePID for the why).
       force.set(0, 0, 0);
-      force.addScaledVector(error, opts.Kp);
+      force.addScaledVector(error, Kp);
       force.addScaledVector(integral, Ki);
-      force.addScaledVector(derivative, Kd);
+      force.addScaledVector(velocity, -Kd);
 
       velocity.addScaledVector(force, dt / mass);
       actual.value.addScaledVector(velocity, dt);
-      prevError.copy(error);
     },
     () => {
       actual.value.copy(setpoint.value);
       velocity.set(0, 0, 0);
       integral.set(0, 0, 0);
-      prevError.set(0, 0, 0);
     }
   );
 

@@ -86,6 +86,30 @@ const on = ref(false);
 </style>
 
 ---
+
+## PID tuning, live
+
+The dashed line is the setpoint — what we want. The red line is the actual
+value a PID controller produces with the current gains. Drag setpoint quickly
+and watch overshoot, settling time, oscillation.
+
+<PIDTuningDemo />
+
+<div class="hint">
+  Underdamped overshoots and rings. Critical is the snap. Overdamped is sluggish.
+</div>
+
+<style>
+.hint {
+  font-style: italic;
+  color: var(--cookbook-text-muted);
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+</style>
+
+---
 layout: center
 class: text-center
 ---
