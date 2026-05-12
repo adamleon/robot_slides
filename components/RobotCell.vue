@@ -35,6 +35,10 @@ defineProps<{
     :jointAngles="jointAngles"
     :showFrames="showFrames"
   />
-  <RobotCellLite v-else-if="BUILD_PROFILE === 'lite'" />
+  <RobotCellLite
+    v-else-if="BUILD_PROFILE === 'lite'"
+    :robot="robot"
+    :jointAngles="jointAngles"
+  />
   <RobotCellStatic v-else />
 </template>
