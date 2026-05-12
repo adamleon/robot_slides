@@ -82,6 +82,21 @@ export function loadUrdfBundled(bundled: BundledRobot): URDFRobot {
   return loader.parse(bundled.urdfText);
 }
 
+/**
+ * Parse a BundledRobot just for its joint structure — useful for widgets
+ * that need joint names, limits, and types but don't render the robot
+ * themselves (e.g. JointSliderPanel). The mesh callback is a no-op, so
+ * none of the bundled .dae text is decoded.
+ *
+ * The returned URDFRobot has the full joint tree (link transforms,
+ * joints[name].setJointValue, etc.) but every visual is an empty Object3D.
+ */
+export function parseJointInfo(robot: BundledRobot): URDFRobot {
+  const loader = new URDFLoader();
+  loader.loadMeshCb = (_url, _manager, onLoad) => onLoad(new Object3D());
+  return loader.parse(robot.urdfText);
+}
+
 // -----------------------------------------------------------------------------
 // URL-fetch path (http:// only)
 // -----------------------------------------------------------------------------

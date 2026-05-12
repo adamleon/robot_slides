@@ -49,11 +49,54 @@ import { ur5e } from "../../lib/robots/ur5e";
 </style>
 
 ---
+layout: default
+---
+
+## Move the joints
+
+<div class="kinematics-grid">
+  <RobotCell :robot="ur5e" :jointAngles="q" />
+  <JointSliderPanel :robot="ur5e" @update:jointAngles="q = $event" />
+</div>
+
+<p class="hint">
+  Drag a slider quickly — the joint follows with the same second-order
+  dynamics from the previous lecture's PID demo (defaults Kp=40, Kd=8,
+  ζ ≈ 0.63 — visibly underdamped).
+</p>
+
+<script setup lang="ts">
+import { ref } from "vue";
+import RobotCell from "../../components/RobotCell.vue";
+import JointSliderPanel from "../../components/JointSliderPanel.vue";
+import { ur5e } from "../../lib/robots/ur5e";
+
+const q = ref<Record<string, number>>({});
+</script>
+
+<style>
+.kinematics-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 1rem;
+  height: 440px;
+  margin-top: 0.5rem;
+}
+.hint {
+  margin-top: 0.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--cookbook-text-muted);
+  font-style: italic;
+}
+</style>
+
+---
 layout: center
 class: text-center
 ---
 
 ## More on the way
 
-Joint sliders with PID-soft binding, live PID tuning against the arm,
-and a joint-angle plot are the next three slides in this lecture.
+Live PID tuning against the arm and a joint-angle plot are the next
+two slides in this lecture.
