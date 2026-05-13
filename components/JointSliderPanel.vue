@@ -45,6 +45,13 @@ const emit = defineEmits<{
 // One URDFRobot, joints only — no meshes parsed here.
 const parsed = parseJointInfo(props.robot);
 
+// Vue auto-unwraps refs when they're passed through :prop="ref", so by
+// the time we read props.Kp it's a plain number. We wrap it in a computed
+// so usePID's unref() sees a Ref<number> and re-reads on every change —
+// which is what makes the live PID-tuning slide actually re-tune.
+const KpRef = computed(() => props.Kp);
+const KdRef = computed(() => props.Kd);
+
 interface Row {
   name: string;
   lower: number;
@@ -64,7 +71,7 @@ for (const name in parsed.joints) {
     continue;
   }
   const setpoint = ref(0);
-  const actual = usePID(setpoint, { Kp: props.Kp, Kd: props.Kd });
+  const actual = usePID(setpoint, { Kp: KpRef, Kd: KdRef });
   rows.push({
     name,
     // Continuous joints have no URDF limits; clamp the slider range to ±π
