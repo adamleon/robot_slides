@@ -223,12 +223,12 @@ layout: default
 
 <div class="plot-grid">
   <div class="arm-pane">
-    <RobotCell :robot="ur5e" :jointAngles="q3" />
     <div class="actions">
       <button type="button" @click="playMotion" :disabled="playing">
         {{ playing ? "playing…" : "play recorded motion" }}
       </button>
     </div>
+    <RobotCell :robot="ur5e" :jointAngles="q3" />
   </div>
   <div class="graph-pane">
     <JointAngleGraph :jointAngles="q3" :windowSeconds="6" />
@@ -304,7 +304,7 @@ function playMotion() {
   gap: 0.5rem;
   min-height: 0;
 }
-.arm-pane > :first-child {
+.arm-pane > :last-child {
   flex: 1 1 auto;
   min-height: 0;
 }
