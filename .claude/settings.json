@@ -24,7 +24,7 @@
       "PowerShell(Get-ChildItem*)",
       "PowerShell(Test-Path*)",
       "PowerShell(Set-Location*)",
-      "PowerShell($env:Path = *)"
+      "PowerShell($env:Path*)"
     ],
     "deny": [
       "Bash(git reset --hard*)",
