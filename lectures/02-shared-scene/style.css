@@ -1,0 +1,41 @@
+/*
+ * lectures/02-shared-scene/style.css
+ *
+ * Pulls in the cookbook theme, then overrides the slide layout backgrounds
+ * to transparent so the persistent shared three.js scene (rendered by
+ * global-bottom.vue) is visible through the slide. The dark cookbook bg
+ * lives on the document body, so transparent layouts get the same near-
+ * black backdrop where the canvas has no meshes.
+ */
+@import url("../../styles/cookbook.css");
+
+/* Slidev's slide-content wrapper has its own opaque dark bg by default;
+   override here so the shared-scene canvas (rendered by global-bottom.vue
+   into the wrap that sits inside slide-content) is visible. */
+.slidev-slide-content {
+  background-color: transparent !important;
+}
+
+.slidev-layout,
+.slidev-layout.default,
+.slidev-layout.cover,
+.slidev-layout.center,
+.slidev-layout.intro,
+.slidev-layout.section {
+  background-color: transparent !important;
+  background-image: none !important;
+  /* Lift the layout (and the text inside it) above the shared-scene canvas
+     which sits at z-index 1 inside slide-content. Without this, the canvas
+     would paint over the slide headings/body text. */
+  position: relative;
+  z-index: 2;
+}
+
+/* Slide text needs to stand off the 3D scene behind it. A subtle dark
+   panel behind headings/body keeps long passages readable without
+   hiding the scene. */
+.slidev-layout h1,
+.slidev-layout h2,
+.slidev-layout p {
+  text-shadow: 0 0 6px rgba(27, 20, 22, 0.85);
+}
