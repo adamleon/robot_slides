@@ -216,10 +216,134 @@ const q2 = ref<Record<string, number>>({});
 </style>
 
 ---
+layout: default
+---
+
+## Joint angles over time
+
+<div class="plot-grid">
+  <div class="arm-pane">
+    <RobotCell :robot="ur5e" :jointAngles="q3" />
+    <div class="actions">
+      <button type="button" @click="playMotion" :disabled="playing">
+        {{ playing ? "playing…" : "play recorded motion" }}
+      </button>
+    </div>
+  </div>
+  <div class="graph-pane">
+    <JointAngleGraph :jointAngles="q3" :windowSeconds="6" />
+  </div>
+</div>
+
+<script setup lang="ts">
+import { ref } from "vue";
+import RobotCell from "../../components/RobotCell.vue";
+import JointAngleGraph from "../../components/JointAngleGraph.vue";
+import { ur5e } from "../../lib/robots/ur5e";
+
+// Six joints, seeded at zero so the plot has its full series from frame 1.
+const q3 = ref<Record<string, number>>({
+  shoulder_pan_joint: 0,
+  shoulder_lift_joint: 0,
+  elbow_joint: 0,
+  wrist_1_joint: 0,
+  wrist_2_joint: 0,
+  wrist_3_joint: 0,
+});
+const playing = ref(false);
+
+// A short choreography — step through three waypoints, each held briefly.
+// The PID-driven arm settles between waypoints (no PID here, just direct
+// setpoint assignment) — the JointAngleGraph captures the trace.
+const waypoints: Array<{ at: number; q: Record<string, number> }> = [
+  { at: 0.0, q: { shoulder_pan_joint: 0,    shoulder_lift_joint: 0,    elbow_joint: 0,    wrist_1_joint: 0,    wrist_2_joint: 0, wrist_3_joint: 0 } },
+  { at: 1.0, q: { shoulder_pan_joint: 0.6,  shoulder_lift_joint: -1.2, elbow_joint: 1.2,  wrist_1_joint: -0.6, wrist_2_joint: 0, wrist_3_joint: 0 } },
+  { at: 3.0, q: { shoulder_pan_joint: -0.8, shoulder_lift_joint: -0.4, elbow_joint: 0.8,  wrist_1_joint: 0.3,  wrist_2_joint: 0, wrist_3_joint: 0 } },
+  { at: 5.0, q: { shoulder_pan_joint: 0,    shoulder_lift_joint: 0,    elbow_joint: 0,    wrist_1_joint: 0,    wrist_2_joint: 0, wrist_3_joint: 0 } },
+];
+
+function playMotion() {
+  if (playing.value) return;
+  playing.value = true;
+  const start = performance.now();
+  let i = 0;
+  const tick = () => {
+    const t = (performance.now() - start) / 1000;
+    while (i + 1 < waypoints.length && waypoints[i + 1].at <= t) i++;
+    if (i + 1 >= waypoints.length) {
+      q3.value = { ...waypoints[waypoints.length - 1].q };
+      playing.value = false;
+      return;
+    }
+    // Linear interpolation between waypoint i and i+1.
+    const a = waypoints[i];
+    const b = waypoints[i + 1];
+    const u = (t - a.at) / (b.at - a.at);
+    const next: Record<string, number> = {};
+    for (const k of Object.keys(a.q)) {
+      next[k] = a.q[k] + u * (b.q[k] - a.q[k]);
+    }
+    q3.value = next;
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+</script>
+
+<style>
+.plot-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 1rem;
+  height: 460px;
+  margin-top: 0.5rem;
+}
+.arm-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 0;
+}
+.arm-pane > :first-child {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.actions {
+  display: flex;
+  justify-content: center;
+}
+.actions button {
+  padding: 0.4em 1em;
+  background: transparent;
+  color: var(--cookbook-text, #e8d7b5);
+  border: 1px solid var(--cookbook-red, #f26060);
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+.actions button:hover:not(:disabled) {
+  background: rgba(242, 96, 96, 0.15);
+}
+.actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.graph-pane {
+  background: var(--cookbook-surface, #261c1f);
+  border: 1px solid rgba(242, 96, 96, 0.15);
+  border-radius: 6px;
+  padding: 0.5rem;
+}
+</style>
+
+---
 layout: center
 class: text-center
 ---
 
-## More on the way
+## End of lecture 01
 
-A joint-angle plot driven by a recorded motion is the next slide.
+Forward kinematics, joint sliders with PID dynamics, live PID tuning,
+and a recorded-motion plot. Inverse kinematics is M5.
