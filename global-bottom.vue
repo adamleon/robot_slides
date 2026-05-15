@@ -53,14 +53,20 @@ const targetPosition = ref(new THREE.Vector3(1.4, 1.4, 1.0));
 const targetLookAt = ref(new THREE.Vector3(0, 0, 0.4));
 const stiffness = ref(80);
 const damping = ref(12);
+// Bump this to make both springs jump to their current target instantly.
+// We use the snap signal (lib/control.ts SpringOptions.snapKey) rather
+// than huge gains — explicit-Euler is unstable for k > ~1e4 at 60fps.
+const snapKey = ref(0);
 
 const springPosition = useSpringVec3(targetPosition, {
   stiffness,
   damping,
+  snapKey,
 });
 const springLookAt = useSpringVec3(targetLookAt, {
   stiffness,
   damping,
+  snapKey,
 });
 
 // Slidev's nav composable: reactive current-slide info including front-matter.
@@ -90,9 +96,12 @@ watch(
     }
     // Spring tuning per slide.
     if (state.transition === "snap") {
-      // Effectively rigid: huge stiffness + damping, no visible inertia.
-      stiffness.value = 1e6;
-      damping.value = 1e3;
+      // Bump the snap key — both springs will copy target → actual on the
+      // next frame and zero their velocity. Gains stay at safe defaults
+      // so any subsequent non-snap slide animates normally.
+      stiffness.value = 80;
+      damping.value = 12;
+      snapKey.value += 1;
     } else if (state.transition === "critical") {
       // No-overshoot glide, faster than the soft default.
       const k = state.springStiffness ?? 150;

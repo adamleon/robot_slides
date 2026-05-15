@@ -103,6 +103,14 @@ export interface SpringOptions {
   mass?: MaybeRef<number>;
   /** Initial value of the controlled variable (default = target at register time). */
   initial?: number;
+  /**
+   * Snap signal. Increment this ref to make the spring jump to its current
+   * target instantly (actual ← target, velocity ← 0). Useful for "snap"
+   * transitions where the dynamics shouldn't be visible at all — far safer
+   * than picking huge stiffness/damping, which destabilises the explicit-
+   * Euler step and can NaN the actual.
+   */
+  snapKey?: MaybeRef<number>;
 }
 
 /**
@@ -117,9 +125,18 @@ export function useSpring(
 ): Readonly<Ref<number>> {
   const actual = ref(opts.initial ?? target.value);
   let velocity = 0;
+  let lastSnapKey = unref(opts.snapKey) ?? 0;
 
   registerController(
     (dt) => {
+      const currentSnapKey = unref(opts.snapKey) ?? 0;
+      if (currentSnapKey !== lastSnapKey) {
+        lastSnapKey = currentSnapKey;
+        actual.value = target.value;
+        velocity = 0;
+        return;
+      }
+
       const k = unref(opts.stiffness) ?? 100;
       const c = unref(opts.damping) ?? 20;
       const m = unref(opts.mass) ?? 1;

@@ -30,9 +30,21 @@ export function useSpringVec3(
   const velocity = new THREE.Vector3();
   const tmpDisp = new THREE.Vector3();
   const tmpForce = new THREE.Vector3();
+  let lastSnapKey = unref(opts.snapKey) ?? 0;
 
   registerController(
     (dt) => {
+      // Snap path — see opts.snapKey docstring in lib/control.ts. We check
+      // FIRST so callers can race a target update + snap in the same frame
+      // and the snap reads the just-updated target.
+      const currentSnapKey = unref(opts.snapKey) ?? 0;
+      if (currentSnapKey !== lastSnapKey) {
+        lastSnapKey = currentSnapKey;
+        actual.value.copy(target.value);
+        velocity.set(0, 0, 0);
+        return;
+      }
+
       const k = unref(opts.stiffness) ?? 100;
       const c = unref(opts.damping) ?? 20;
       const m = unref(opts.mass) ?? 1;
