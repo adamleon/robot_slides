@@ -22,10 +22,26 @@ import type { PIDOptions, SpringOptions } from "./control";
  *
  * Returns a ref whose Vector3 value is updated in place each frame.
  */
+/**
+ * Handle returned by useSpringVec3 — actual value plus two imperative
+ * controls for special transitions.
+ *
+ * `snap()` jumps to the current target (actual ← target, velocity ← 0).
+ * `syncActualTo(pose)` jumps to an external pose without changing target;
+ * useful when handing the camera back from a user-driven controller
+ * (e.g. OrbitControls) so the next spring animation starts from where the
+ * user left the camera rather than from the spring's internal state.
+ */
+export interface SpringVec3Handle {
+  actual: Readonly<Ref<THREE.Vector3>>;
+  snap: () => void;
+  syncActualTo: (pose: THREE.Vector3) => void;
+}
+
 export function useSpringVec3(
   target: Ref<THREE.Vector3>,
   opts: SpringOptions = {}
-): Readonly<Ref<THREE.Vector3>> {
+): SpringVec3Handle {
   const actual = ref(target.value.clone());
   const velocity = new THREE.Vector3();
   const tmpDisp = new THREE.Vector3();
@@ -63,7 +79,17 @@ export function useSpringVec3(
     }
   );
 
-  return actual;
+  return {
+    actual,
+    snap: () => {
+      actual.value.copy(target.value);
+      velocity.set(0, 0, 0);
+    },
+    syncActualTo: (pose: THREE.Vector3) => {
+      actual.value.copy(pose);
+      velocity.set(0, 0, 0);
+    },
+  };
 }
 
 /**

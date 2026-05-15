@@ -29,6 +29,21 @@
      would paint over the slide headings/body text. */
   position: relative;
   z-index: 2;
+  /* Text-area events pass through to the canvas underneath so OrbitControls
+     on orbit-enabled slides can receive drags from anywhere in the slide.
+     Slidev's own footer / overview chrome lives outside .slidev-layout and
+     still receives events normally. */
+  pointer-events: none;
+}
+/* Re-enable events for anything the slide author marks as interactive
+   (buttons, links, inputs, etc.) — leaf elements within the layout. */
+.slidev-layout a,
+.slidev-layout button,
+.slidev-layout input,
+.slidev-layout textarea,
+.slidev-layout select,
+.slidev-layout [contenteditable] {
+  pointer-events: auto;
 }
 
 /* Slide text needs to stand off the 3D scene behind it. A subtle dark

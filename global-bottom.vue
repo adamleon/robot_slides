@@ -26,6 +26,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { useNav } from "@slidev/client";
 import {
   ensureSharedScene,
@@ -42,6 +43,13 @@ interface SceneState {
   transition?: "spring" | "critical" | "snap";
   springStiffness?: number;
   springDamping?: number;
+  /**
+   * When true, the slide hands camera control to OrbitControls — the spring
+   * stops writing to the camera and the user can click-drag to rotate,
+   * scroll to zoom, right-drag to pan. The next slide that doesn't set
+   * orbit gets a glide-in from whatever pose the user left the camera at.
+   */
+  orbit?: boolean;
 }
 
 /** How the shared scene disappears on slides that have no sceneState.
@@ -63,16 +71,43 @@ const damping = ref(12);
 // than huge gains — explicit-Euler is unstable for k > ~1e4 at 60fps.
 const snapKey = ref(0);
 
-const springPosition = useSpringVec3(targetPosition, {
+const cameraSpring = useSpringVec3(targetPosition, {
   stiffness,
   damping,
   snapKey,
 });
-const springLookAt = useSpringVec3(targetLookAt, {
+const lookAtSpring = useSpringVec3(targetLookAt, {
   stiffness,
   damping,
   snapKey,
 });
+
+// True while the current slide hands control to OrbitControls. Reactive so
+// pointer-events on the wrap can flip based on it (orbit-enabled slides
+// need the canvas to receive mouse events; everything else stays
+// pointer-events:none so slide buttons/text remain clickable).
+const orbitActive = ref(false);
+let orbitControls: OrbitControls | null = null;
+
+function attachOrbit(scene: SharedScene) {
+  if (orbitControls) return;
+  orbitControls = new OrbitControls(scene.camera, scene.renderer.domElement);
+  orbitControls.target.copy(lookAtSpring.actual.value);
+  orbitControls.enableDamping = true;
+  orbitControls.dampingFactor = 0.1;
+  orbitActive.value = true;
+}
+
+function detachOrbit(scene: SharedScene) {
+  if (!orbitControls) return;
+  // Capture the user-driven pose so the next slide's spring glides FROM
+  // here instead of jumping back to whatever the spring was at.
+  cameraSpring.syncActualTo(scene.camera.position);
+  lookAtSpring.syncActualTo(orbitControls.target);
+  orbitControls.dispose();
+  orbitControls = null;
+  orbitActive.value = false;
+}
 
 // Slidev's nav composable: reactive current-slide info including front-matter.
 const nav = useNav();
@@ -102,21 +137,34 @@ const hideModeOfCurrentSlide = computed<SceneHide>(() => {
 // doesn't, we either fade or cut the wrap based on the slide's sceneHide
 // setting. The transition is set on the wrap so leaving/arriving slides
 // both contribute their mode to the animation timing.
+//
+// pointer-events flip to "auto" only while OrbitControls are active so
+// mouse drags hit the canvas; non-orbit slides stay pointer-events: none
+// so slide buttons, code blocks, and links above the canvas stay clickable.
 const wrapStyle = computed(() => {
+  const pointerEvents = orbitActive.value ? "auto" : "none";
   const showing = !!sceneStateOfCurrentSlide.value;
   if (showing) {
-    return { opacity: 1, transition: "opacity 0.4s ease" };
+    return { opacity: 1, transition: "opacity 0.4s ease", pointerEvents };
   }
   if (hideModeOfCurrentSlide.value === "hard") {
-    return { opacity: 0, transition: "none" };
+    return { opacity: 0, transition: "none", pointerEvents };
   }
-  return { opacity: 0, transition: "opacity 0.4s ease" };
+  return { opacity: 0, transition: "opacity 0.4s ease", pointerEvents };
 });
 
 watch(
   sceneStateOfCurrentSlide,
-  (state) => {
+  (state, prev) => {
+    const nowOrbit = state?.orbit === true;
+    const wasOrbit = prev?.orbit === true;
+
+    // Disengage orbit first so the syncActualTo handoff captures the
+    // user's current camera before any other state changes.
+    if (wasOrbit && !nowOrbit && scene) detachOrbit(scene);
+
     if (!state) return;
+
     if (state.camera?.position) {
       targetPosition.value = new THREE.Vector3(...state.camera.position);
     }
@@ -141,6 +189,12 @@ watch(
       stiffness.value = state.springStiffness ?? 80;
       damping.value = state.springDamping ?? 12;
     }
+
+    // Engage orbit AFTER spring targets are written for this slide. The
+    // spring will keep animating toward the new pose until the user
+    // actually starts dragging; once orbit is active the render loop
+    // skips the spring writes and OrbitControls owns the camera.
+    if (nowOrbit && !wasOrbit && scene) attachOrbit(scene);
   },
   { immediate: true }
 );
@@ -156,10 +210,23 @@ onMounted(() => {
   const h = wrapperEl.value.clientHeight;
   scene = ensureSharedScene(canvasEl.value, w, h);
 
+  // The slide-state watcher fires with immediate:true during setup, but
+  // `scene` is still null at that moment so it can't attach OrbitControls
+  // for an initial orbit-enabled slide. Catch up here.
+  if (sceneStateOfCurrentSlide.value?.orbit === true) {
+    attachOrbit(scene);
+  }
+
   const tick = () => {
     if (disposed || !scene) return;
-    scene.camera.position.copy(springPosition.value);
-    scene.camera.lookAt(springLookAt.value);
+    if (orbitControls) {
+      // User-driven camera. OrbitControls reads damping internally and
+      // updates camera.position + orientation; we just kick its tick.
+      orbitControls.update();
+    } else {
+      scene.camera.position.copy(cameraSpring.actual.value);
+      scene.camera.lookAt(lookAtSpring.actual.value);
+    }
     scene.renderer.render(scene.scene, scene.camera);
     animationId = requestAnimationFrame(tick);
   };
@@ -183,6 +250,8 @@ onBeforeUnmount(() => {
   disposed = true;
   if (animationId !== null) cancelAnimationFrame(animationId);
   resizeObserver?.disconnect();
+  orbitControls?.dispose();
+  orbitControls = null;
 });
 </script>
 

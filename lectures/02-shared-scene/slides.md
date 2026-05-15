@@ -28,12 +28,14 @@ sceneState:
   camera:
     position: [3.0, 3.0, 2.0]
     lookAt: [0, 0, 0.4]
+  orbit: true
 ---
 
 ## The full cell
 
 A workstation-distance view. The camera sits far enough back that the whole
-arm fits comfortably in frame.
+arm fits comfortably in frame. **Drag** to orbit, **scroll** to zoom, **right-
+drag** to pan. The next slide takes the camera back over.
 
 ---
 sceneState:
