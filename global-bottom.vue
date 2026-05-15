@@ -44,6 +44,11 @@ interface SceneState {
   springDamping?: number;
 }
 
+/** How the shared scene disappears on slides that have no sceneState.
+ *  "hard": instant cut. "soft" (default): 400 ms opacity fade.
+ *  Set per-slide via front-matter `sceneHide: hard | soft`. */
+type SceneHide = "hard" | "soft";
+
 const wrapperEl = ref<HTMLDivElement | null>(null);
 const canvasEl = ref<HTMLCanvasElement | null>(null);
 
@@ -72,16 +77,40 @@ const springLookAt = useSpringVec3(targetLookAt, {
 // Slidev's nav composable: reactive current-slide info including front-matter.
 const nav = useNav();
 
-const sceneStateOfCurrentSlide = computed<SceneState | undefined>(() => {
+function readFrontmatter(): Record<string, unknown> | undefined {
   const slide = nav.currentSlideRoute?.value;
   if (!slide) return undefined;
+  const meta = slide.meta as Record<string, unknown> | undefined;
   // Slidev's front-matter is stashed on the route meta. Different Slidev
   // versions have used slightly different shapes; check both known paths.
-  const meta = slide.meta as Record<string, unknown> | undefined;
-  const fm =
-    (meta?.slide as { frontmatter?: { sceneState?: SceneState } })?.frontmatter ??
-    (meta as { frontmatter?: { sceneState?: SceneState } } | undefined)?.frontmatter;
-  return fm?.sceneState;
+  return (
+    (meta?.slide as { frontmatter?: Record<string, unknown> })?.frontmatter ??
+    (meta as { frontmatter?: Record<string, unknown> } | undefined)?.frontmatter
+  );
+}
+
+const sceneStateOfCurrentSlide = computed<SceneState | undefined>(() => {
+  return readFrontmatter()?.sceneState as SceneState | undefined;
+});
+
+const hideModeOfCurrentSlide = computed<SceneHide>(() => {
+  const v = readFrontmatter()?.sceneHide;
+  return v === "hard" ? "hard" : "soft";
+});
+
+// Canvas is visible when the current slide has a sceneState. When it
+// doesn't, we either fade or cut the wrap based on the slide's sceneHide
+// setting. The transition is set on the wrap so leaving/arriving slides
+// both contribute their mode to the animation timing.
+const wrapStyle = computed(() => {
+  const showing = !!sceneStateOfCurrentSlide.value;
+  if (showing) {
+    return { opacity: 1, transition: "opacity 0.4s ease" };
+  }
+  if (hideModeOfCurrentSlide.value === "hard") {
+    return { opacity: 0, transition: "none" };
+  }
+  return { opacity: 0, transition: "opacity 0.4s ease" };
 });
 
 watch(
@@ -158,7 +187,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="wrapperEl" class="shared-canvas-wrap">
+  <div ref="wrapperEl" class="shared-canvas-wrap" :style="wrapStyle">
     <canvas ref="canvasEl" class="shared-canvas" />
   </div>
 </template>

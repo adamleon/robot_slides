@@ -13,6 +13,10 @@ transition: slide-left
 mdc: true
 routerMode: hash
 colorSchema: dark
+# This title slide has no sceneState — the scene shouldn't show. `hard`
+# cuts the canvas instantly when arriving here (e.g. paging back from
+# slide 2). Pair with slide 6's `sceneHide: soft` to compare the two modes.
+sceneHide: hard
 ---
 
 # Persistent shared scene
@@ -76,6 +80,7 @@ the pan, or when consecutive slides intentionally cut.
 ---
 layout: center
 class: text-center
+sceneHide: soft
 ---
 
 ## End of lecture 02
