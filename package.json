@@ -13,6 +13,7 @@
   "dependencies": {
     "@slidev/cli": "^0.50.0",
     "@slidev/theme-default": "^0.25.0",
+    "closed-chain-ik": "^0.0.3",
     "three": "^0.169.0",
     "uplot": "^1.6.32",
     "urdf-loader": "^0.12.7",
