@@ -13,22 +13,20 @@
 //
 // See DESIGN.md §9 M5.
 
-// closed-chain-ik 0.0.3 re-exports an IKRootsHelper that imports the
-// long-removed CylinderBufferGeometry from three.js, which Rollup chokes on.
-// Importing directly from the source modules sidesteps the broken helper
-// without forking the package. The library ships no type declarations.
-// @ts-expect-error
-import { Solver } from "closed-chain-ik/src/core/Solver.js";
-// @ts-expect-error
-import { Goal } from "closed-chain-ik/src/core/Goal.js";
-// @ts-expect-error
-import { DOF } from "closed-chain-ik/src/core/Joint.js";
+// closed-chain-ik ships no TypeScript types. Its package index re-exports
+// IKRootsHelper, whose source imports removed three.js exports (Box/
+// Cylinder/SphereBufferGeometry) — we work around that with a Vite resolve
+// alias (see vite.config.ts) that swaps the broken file for an empty stub.
+// With that alias in place, package-root imports work in dev and build.
 // @ts-expect-error
 import {
+  Solver,
+  Goal,
+  DOF,
   urdfRobotToIKRoot,
   setUrdfFromIK,
   setIKFromUrdf,
-} from "closed-chain-ik/src/three/urdfHelpers.js";
+} from "closed-chain-ik";
 import type { URDFRobot } from "urdf-loader";
 import * as THREE from "three";
 
