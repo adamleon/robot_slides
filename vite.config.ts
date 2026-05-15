@@ -72,6 +72,15 @@ export default defineConfig({
   // lecture would need its own copy of public/urdf/ur5e/ etc. Override to the
   // project-root public/ so shared assets are vendored once.
   publicDir: resolve(projectRoot, "public"),
+  optimizeDeps: {
+    // Vite uses esbuild (not Rollup) for dev-server dependency pre-bundling,
+    // and esbuild doesn't run our resolveId plugin. Pre-bundling
+    // closed-chain-ik would hit the same broken IKJointHelper.js imports
+    // we're already stubbing for Rollup. Excluding the package skips
+    // pre-bundling and routes file requests through Vite's request-time
+    // resolver, which DOES run our plugin.
+    exclude: ["closed-chain-ik"],
+  },
   plugins: [
     stubClosedChainIkHelpers,
     Components({
