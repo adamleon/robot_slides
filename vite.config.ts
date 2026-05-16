@@ -34,16 +34,29 @@ const isLite = profile === "lite";
 // SphereBufferGeometry from three. Those names were removed from three years
 // ago, so the import lines fail Vite/Rollup resolution before our code even
 // runs. We don't use either helper, so this plugin intercepts the resolve
-// step and points both files at an empty-class stub. Relative imports
-// (./IKJointHelper.js from IKRootsHelper.js) can't be matched by
-// `resolve.alias`, hence the resolveId hook.
+// step and returns a virtual module with empty stand-in classes.
+//
+// Why a virtual module instead of pointing at shims/closed-chain-ik-helpers.js
+// on disk: in dev mode, Slidev's userRoot is the lecture directory, but Vite's
+// root is the project root, so a stub at projectRoot/shims/ would get URL
+// `/shims/closed-chain-ik-helpers.js`. Slidev's SPA-fallback middleware then
+// catches that route and returns index.html — the browser sees text/html
+// where it expects a JS module and the slide blanks out. The `\0`-prefixed
+// virtual ID stays out of the URL space entirely.
+const HELPER_STUB_ID = "\0virtual:closed-chain-ik-helper-stub";
+const HELPER_STUB_SRC =
+  "export class IKRootsHelper {} export class IKJointHelper {}";
 const stubClosedChainIkHelpers = {
   name: "robot-slides:closed-chain-ik-helper-stubs",
   enforce: "pre" as const,
   resolveId(id: string, importer?: string) {
     if (!/IK(Roots|Joint)Helper\.js$/.test(id)) return null;
     if (!importer || !importer.includes("closed-chain-ik")) return null;
-    return resolve(projectRoot, "shims/closed-chain-ik-helpers.js");
+    return HELPER_STUB_ID;
+  },
+  load(id: string) {
+    if (id === HELPER_STUB_ID) return HELPER_STUB_SRC;
+    return null;
   },
 };
 
@@ -80,6 +93,14 @@ export default defineConfig({
     // pre-bundling and routes file requests through Vite's request-time
     // resolver, which DOES run our plugin.
     exclude: ["closed-chain-ik"],
+    // closed-chain-ik transitively imports linear-solve as `import x from
+    // 'linear-solve'`. linear-solve is CJS-only (no `module` field) and
+    // assigns to module.exports without an `exports.default`. Excluding
+    // closed-chain-ik above ALSO opts its transitive deps out of pre-bundling,
+    // so Vite serves linear-solve as raw CJS and the ESM default-import fails
+    // with "does not provide an export named 'default'". Forcing it back into
+    // pre-bundling lets esbuild generate the synthetic default export.
+    include: ["linear-solve"],
   },
   plugins: [
     stubClosedChainIkHelpers,
